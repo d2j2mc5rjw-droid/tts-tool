@@ -9,18 +9,25 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
         include:
+          # Windows
           - os: windows-latest
-            artifact_name: TTS语音合成工具.exe
-            asset_name: TTS-Windows.exe
+            artifact_name: TTS-Windows-x64.exe
+            build_cmd: pyinstaller --onefile --windowed --name "TTS-Windows-x64" app.py
+          # macOS Intel
+          - os: macos-13
+            artifact_name: TTS-macOS-Intel
+            build_cmd: pyinstaller --onefile --windowed --name "TTS-macOS-Intel" app.py
+          # macOS Apple Silicon
           - os: macos-latest
-            artifact_name: TTS语音合成工具
-            asset_name: TTS-macOS
+            artifact_name: TTS-macOS-AppleSilicon
+            build_cmd: pyinstaller --onefile --windowed --name "TTS-macOS-AppleSilicon" app.py
+          # Linux
           - os: ubuntu-latest
-            artifact_name: TTS语音合成工具
-            asset_name: TTS-Linux
+            artifact_name: TTS-Linux-x64
+            build_cmd: pyinstaller --onefile --windowed --name "TTS-Linux-x64" app.py
 
     runs-on: ${{ matrix.os }}
 
@@ -38,15 +45,14 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
 
-    - name: Build with PyInstaller
-      run: |
-        pyinstaller --onefile --windowed --name "TTS语音合成工具" app.py
+    - name: Build
+      run: ${{ matrix.build_cmd }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.asset_name }}
-        path: dist/${{ matrix.artifact_name }}
+        name: ${{ matrix.artifact_name }}
+        path: dist/
 
   release:
     needs: build
@@ -57,13 +63,17 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v4
 
+    - name: List files
+      run: find . -type f -name "TTS-*" | head -20
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          TTS-Windows.exe/TTS语音合成工具.exe
-          TTS-macOS/TTS语音合成工具
-          TTS-Linux/TTS语音合成工具
+          TTS-Windows-x64.exe/TTS-Windows-x64.exe
+          TTS-macOS-Intel/TTS-macOS-Intel
+          TTS-macOS-AppleSilicon/TTS-macOS-AppleSilicon
+          TTS-Linux-x64/TTS-Linux-x64
         draft: false
         prerelease: false
       env:
