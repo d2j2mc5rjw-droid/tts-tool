@@ -6,25 +6,24 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Windows
           - os: windows-latest
             artifact_name: TTS-Windows-x64.exe
             build_cmd: pyinstaller --onefile --windowed --name "TTS-Windows-x64" app.py
-          # macOS Intel
           - os: macos-13
             artifact_name: TTS-macOS-Intel
             build_cmd: pyinstaller --onefile --windowed --name "TTS-macOS-Intel" app.py
-          # macOS Apple Silicon
           - os: macos-latest
             artifact_name: TTS-macOS-AppleSilicon
             build_cmd: pyinstaller --onefile --windowed --name "TTS-macOS-AppleSilicon" app.py
-          # Linux
           - os: ubuntu-latest
             artifact_name: TTS-Linux-x64
             build_cmd: pyinstaller --onefile --windowed --name "TTS-Linux-x64" app.py
@@ -63,11 +62,8 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v4
 
-    - name: List files
-      run: find . -type f -name "TTS-*" | head -20
-
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           TTS-Windows-x64.exe/TTS-Windows-x64.exe
