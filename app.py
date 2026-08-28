@@ -7,6 +7,7 @@ import edge_tts
 import threading
 import os
 import sys
+import json
 
 # 语音配置
 VOICES = {
@@ -17,18 +18,45 @@ VOICES = {
     "英文男声 - Guy": "en-US-GuyNeural",
 }
 
+CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".tts_config.json")
+
 class TTSApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("TTS 语音合成工具")
-        self.root.geometry("600x500")
-        self.root.minsize(500, 400)
+        self.root.geometry("600x550")
+        self.root.minsize(500, 450)
         
-        # 模式设置
+        # 配置
+        self.config = self.load_config()
         self.advanced_mode = tk.BooleanVar(value=False)
-        self.save_path = tk.StringVar(value=os.path.expanduser("~/Desktop"))
         
         self.setup_ui()
+        self.center_window()
+        
+    def center_window(self):
+        self.root.update_idletasks()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+    
+    def load_config(self):
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {"save_path": os.path.expanduser("~/Desktop"), "voice": list(VOICES.keys())[0]}
+    
+    def save_config(self):
+        try:
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, ensure_ascii=False, indent=2)
+        except:
+            pass
         
     def setup_ui(self):
         # 主框架
@@ -40,8 +68,8 @@ class TTSApp:
         title.pack(pady=(0, 20))
         
         # 文本输入
-        ttk.Label(main_frame, text="输入文本:").pack(anchor=tk.W)
-        self.text_input = tk.Text(main_frame, height=8, wrap=tk.WORD)
+        ttk.Label(main_frame, text="输入文本:", font=("Helvetica", 11)).pack(anchor=tk.W)
+        self.text_input = tk.Text(main_frame, height=6, wrap=tk.WORD, font=("Helvetica", 11))
         self.text_input.pack(fill=tk.BOTH, expand=True, pady=(5, 15))
         self.text_input.insert("1.0", "你好，欢迎使用语音合成工具！")
         
@@ -49,11 +77,11 @@ class TTSApp:
         voice_frame = ttk.LabelFrame(main_frame, text="选择语音", padding="10")
         voice_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.voice_var = tk.StringVar(value=list(VOICES.keys())[0])
+        self.voice_var = tk.StringVar(value=self.config.get("voice", list(VOICES.keys())[0]))
         for name in VOICES.keys():
-            ttk.Radiobutton(voice_frame, text=name, variable=self.voice_var, value=name).pack(anchor=tk.W)
+            ttk.Radiobutton(voice_frame, text=name, variable=self.voice_var, value=name).pack(anchor=tk.W, pady=2)
         
-        # 高级选项（默认隐藏）
+        # 高级选项框架（默认隐藏）
         self.advanced_frame = ttk.LabelFrame(main_frame, text="高级选项", padding="10")
         
         # 语速调节
@@ -61,52 +89,61 @@ class TTSApp:
         speed_frame.pack(fill=tk.X, pady=5)
         ttk.Label(speed_frame, text="语速:").pack(side=tk.LEFT)
         self.speed_var = tk.IntVar(value=0)
-        ttk.Scale(speed_frame, from_=-50, to=50, variable=self.speed_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
-        self.speed_label = ttk.Label(speed_frame, text="0")
+        self.speed_scale = ttk.Scale(speed_frame, from_=-50, to=50, variable=self.speed_var, orient=tk.HORIZONTAL)
+        self.speed_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        self.speed_label = ttk.Label(speed_frame, text="0%", width=6)
         self.speed_label.pack(side=tk.LEFT)
-        self.speed_var.trace_add("write", lambda *args: self.speed_label.config(text=str(self.speed_var.get())))
+        self.speed_var.trace_add("write", lambda *args: self.speed_label.config(text=f"{self.speed_var.get()}%"))
         
         # 音量调节
         vol_frame = ttk.Frame(self.advanced_frame)
         vol_frame.pack(fill=tk.X, pady=5)
         ttk.Label(vol_frame, text="音量:").pack(side=tk.LEFT)
         self.volume_var = tk.IntVar(value=0)
-        ttk.Scale(vol_frame, from_=-50, to=50, variable=self.volume_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
-        self.volume_label = ttk.Label(vol_frame, text="0")
+        self.volume_scale = ttk.Scale(vol_frame, from_=-50, to=50, variable=self.volume_var, orient=tk.HORIZONTAL)
+        self.volume_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        self.volume_label = ttk.Label(vol_frame, text="0%", width=6)
         self.volume_label.pack(side=tk.LEFT)
-        self.volume_var.trace_add("write", lambda *args: self.volume_label.config(text=str(self.volume_var.get())))
+        self.volume_var.trace_add("write", lambda *args: self.volume_label.config(text=f"{self.volume_var.get()}%"))
         
         # 保存位置
         save_frame = ttk.Frame(main_frame)
         save_frame.pack(fill=tk.X, pady=(0, 15))
         
-        ttk.Label(save_frame, text="保存位置:").pack(side=tk.LEFT)
+        ttk.Label(save_frame, text="保存位置:", font=("Helvetica", 11)).pack(side=tk.LEFT)
+        self.save_path = tk.StringVar(value=self.config.get("save_path", os.path.expanduser("~/Desktop")))
         ttk.Entry(save_frame, textvariable=self.save_path).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
         ttk.Button(save_frame, text="选择", command=self.choose_save_path).pack(side=tk.LEFT)
         
         # 按钮
         btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X)
+        btn_frame.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Button(btn_frame, text="生成语音", command=self.generate).pack(side=tk.LEFT, padx=(0, 10))
+        self.generate_btn = ttk.Button(btn_frame, text="生成语音", command=self.generate)
+        self.generate_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
         ttk.Button(btn_frame, text="设置", command=self.toggle_advanced).pack(side=tk.LEFT)
         
         # 状态栏
-        self.status = ttk.Label(main_frame, text="就绪", foreground="gray")
-        self.status.pack(fill=tk.X, pady=(10, 0))
+        self.status = ttk.Label(main_frame, text="就绪", foreground="gray", font=("Helvetica", 10))
+        self.status.pack(fill=tk.X)
         
     def toggle_advanced(self):
         if self.advanced_frame.winfo_viewable():
             self.advanced_frame.pack_forget()
             self.advanced_mode.set(False)
+            self.root.geometry("600x550")
         else:
-            self.advanced_frame.pack(fill=tk.X, pady=(0, 15), before=self.children.get("!frame", None))
+            self.advanced_frame.pack(fill=tk.X, pady=(0, 15))
             self.advanced_mode.set(True)
+            self.root.geometry("600x650")
     
     def choose_save_path(self):
         path = filedialog.askdirectory(initialdir=self.save_path.get())
         if path:
             self.save_path.set(path)
+            self.config["save_path"] = path
+            self.save_config()
     
     def generate(self):
         text = self.text_input.get("1.0", tk.END).strip()
@@ -121,27 +158,43 @@ class TTSApp:
         file_path = filedialog.asksaveasfilename(
             initialdir=self.save_path.get(),
             defaultextension=".mp3",
-            filetypes=[("MP3 文件", "*.mp3"), ("所有文件", "*.*")]
+            filetypes=[("MP3 文件", "*.mp3"), ("WAV 文件", "*.wav"), ("所有文件", "*.*")],
+            initialfile="output.mp3"
         )
         
         if not file_path:
             return
         
+        # 保存配置
+        self.config["voice"] = voice_name
+        self.config["save_path"] = os.path.dirname(file_path)
+        self.save_config()
+        
+        # 禁用按钮
+        self.generate_btn.config(state="disabled")
         self.status.config(text="生成中...", foreground="blue")
         self.root.update()
         
         # 在新线程中生成
-        thread = threading.Thread(target=self._generate_thread, args=(text, voice_id, file_path))
+        thread = threading.Thread(target=self._generate_thread, args=(text, voice_id, file_path), daemon=True)
         thread.start()
     
     def _generate_thread(self, text, voice_id, file_path):
         try:
             asyncio.run(self._generate_async(text, voice_id, file_path))
-            self.root.after(0, lambda: self.status.config(text=f"生成成功: {file_path}", foreground="green"))
-            self.root.after(0, lambda: messagebox.showinfo("成功", f"语音已保存到:\n{file_path}"))
+            self.root.after(0, lambda: self._on_success(file_path))
         except Exception as e:
-            self.root.after(0, lambda: self.status.config(text=f"生成失败: {e}", foreground="red"))
-            self.root.after(0, lambda: messagebox.showerror("错误", str(e)))
+            self.root.after(0, lambda: self._on_error(str(e)))
+    
+    def _on_success(self, file_path):
+        self.generate_btn.config(state="normal")
+        self.status.config(text=f"生成成功!", foreground="green")
+        messagebox.showinfo("成功", f"语音已保存到:\n{file_path}")
+    
+    def _on_error(self, error):
+        self.generate_btn.config(state="normal")
+        self.status.config(text=f"生成失败", foreground="red")
+        messagebox.showerror("错误", f"生成失败:\n{error}")
     
     async def _generate_async(self, text, voice_id, file_path):
         rate = f"+{self.speed_var.get()}%" if self.speed_var.get() >= 0 else f"{self.speed_var.get()}%"

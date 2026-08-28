@@ -8,7 +8,7 @@
 - 简单模式和高级模式
 - 可调节语速和音量
 - 支持选择保存位置
-- 跨平台支持（Windows/macOS/Linux）
+- 配置自动保存
 
 ## 安装
 
@@ -32,9 +32,11 @@ python app.py
 
 ## 使用说明
 
+### 基础模式
+
 1. 输入要转换的文本
 2. 选择语音类型
-3. 选择保存位置
+3. 点击"选择"按钮选择保存位置
 4. 点击"生成语音"
 
 ### 高级模式
@@ -58,19 +60,19 @@ python app.py
 ### Windows
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed app.py
+pyinstaller --onefile --windowed --name "TTS语音合成工具" app.py
 ```
 
 ### macOS
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed app.py
+pyinstaller --onefile --windowed --name "TTS语音合成工具" app.py
 ```
 
 ### Linux
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed app.py
+pyinstaller --onefile --windowed --name "TTS语音合成工具" app.py
 ```
 
 ## 依赖
